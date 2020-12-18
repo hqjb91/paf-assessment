@@ -119,13 +119,14 @@ app.post('/upload', multipart.single('document'),  async (req, res) => {
             .insertOne({
                 title, comments, picture: `${req.file.filename}`, timestamp: currDate
             });
-        Promise.all([p0, p1]).then( ([res1, res2]) => {} ).catch( e => { throw e });
+        const [s3Resp, mongoResp] = await Promise.all([p0, p1]);
     
         // Remove file after process ends
         await fs.rmdir(uploadPath, {recursive: true});
         await fs.mkdir(uploadPath);
 
-        res.status(201).type('application/json').json({success: true, key: req.file.filename});
+        res.status(200).type('application/json').json({success: true, key: req.file.filename, _id: mongoResp.ops[0]._id});
+
     } catch (e) {
 		if(e.message == 'User not found' || 'Invalid Password') {
 			console.error(e);
