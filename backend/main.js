@@ -61,7 +61,7 @@ app.use('/', routes(pool, mongoClient, s3, multipart, uploadPath));
 const p0 = (async ()=> {
     const conn = await pool.getConnection();
     await conn.ping();
-    conn.release()
+    conn.release();
     return true;
 })();
 
