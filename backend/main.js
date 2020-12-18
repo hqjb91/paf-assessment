@@ -17,9 +17,9 @@ const PORT = parseInt(process.argv[2]) || parseInt(process.env.PORT) || 3000;
 const pool = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
-    host: process.env.DB_HOST,
+    host: process.env.DB_HOST || 'localhost',
     database: process.env.DB_NAME,
-    timezone: '+08:00',
+    timezone: process.env.DB_PORT || '+08:00',
     port: 3306,
     connectionLimit: 5
 });
@@ -46,9 +46,12 @@ if (!fs.existsSync(uploadPath)){
     fs.mkdirSync(uploadPath);
 }
 
+// Instantiate express
 const app = express();
 
 app.use(morgan('combined'));
+
+// Serve angular
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 // Use router
