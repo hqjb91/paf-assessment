@@ -8,7 +8,7 @@ module.exports = (pool, mongoClient, s3, multipart, uploadPath) => {
 const { mkQuery } = require('../db_utils');
 // SQL statements
 const SQL_GET_USER = "select * from user where user_id = ?";
-const getUser = mkQuery(SQL_GET_USER, pool);
+const getUserDetails = mkQuery(SQL_GET_USER, pool);
 
 // Configure resources
 
@@ -18,14 +18,7 @@ router.post('/login', express.json(), async (req, res) => {
     const hashedPassword = sha1(`${password}`);
 
     try {
-		const hashStoredInDB = await getUser([user_id]);
-
-        if( !hashStoredInDB ) {
-            throw new Error('User not found');
-        }
-        if( hashedPassword != hashStoredInDB.password ) {
-            throw new Error('Invalid Password');
-		}
+        await checkAuth(user_id, hashedPassword, getUserDetails);
 
         res.status(200).json({success: true});
     } catch (e) {
@@ -42,15 +35,8 @@ router.post('/upload', multipart.single('document'),  async (req, res) => {
 
     try{
 
-		// Check if user is authenticated
-        const hashStoredInDB = await getUser([user_id]);
-
-        if( Object.keys(hashStoredInDB).length < 1 ) {
-            throw new Error('User not found');
-        }
-        if( hashedPassword != hashStoredInDB.password ) {
-            throw new Error('Invalid Password');
-		}
+        // Check if user is authenticated
+        await checkAuth(user_id, hashedPassword, getUserDetails);
 		
 		// Read file obtained from multer
         const fsResponse = await fs.readFile(req.file.path);
@@ -96,4 +82,15 @@ router.post('/upload', multipart.single('document'),  async (req, res) => {
 });
 
 return router;
+}
+
+const checkAuth = async (user_id, hashedPassword, getUserDetails) => {
+    const hashStoredInDB = await getUserDetails([user_id]);
+
+    if( !hashStoredInDB ) {
+        throw new Error('User not found');
+    }
+    if( hashedPassword != hashStoredInDB.password ) {
+        throw new Error('Invalid Password');
+    }
 }

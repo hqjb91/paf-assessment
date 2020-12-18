@@ -49,7 +49,6 @@ export class MainComponent implements OnInit {
 		formData.set('password', user.password);
 		formData.set('document', this.cameraSvc.getImage().imageData);
 
-
 		this.postService.uploadPost(formData).subscribe( response => {
 			this.clear();
 			this.form.reset();
