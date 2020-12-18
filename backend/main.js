@@ -50,6 +50,7 @@ const getUser = mkQuery(SQL_GET_USER, pool);
 const app = express();
 
 app.use(morgan('combined'));
+app.use(express.static(path.join(__dirname, 'frontend')));
 
 // Configure resources
 
@@ -84,9 +85,9 @@ app.post('/upload', multipart.single('document'),  async (req, res) => {
     try{
 
 		// Check if user is authenticated
-		const hashStoredInDB = await getUser([user_id]);
+        const hashStoredInDB = await getUser([user_id]);
 
-        if( !hashStoredInDB ) {
+        if( Object.keys(hashStoredInDB).length < 1 ) {
             throw new Error('User not found');
         }
         if( hashedPassword != hashStoredInDB.password ) {
@@ -126,7 +127,7 @@ app.post('/upload', multipart.single('document'),  async (req, res) => {
 
         res.status(201).type('application/json').json({success: true, key: req.file.filename});
     } catch (e) {
-		if(e.message = 'User not found' || 'Invalid Password') {
+		if(e.message == 'User not found' || 'Invalid Password') {
 			console.error(e);
 			return res.status(401).type('application/json').json({success: false, error: e.message});
 		}
