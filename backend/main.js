@@ -9,6 +9,7 @@ require('dotenv').config();
 const routes = require('./routes/route');
 const path = require('path');
 const uploadPath = path.join(__dirname, 'uploads');
+const fs = require('fs');
 
 const PORT = parseInt(process.argv[2]) || parseInt(process.env.PORT) || 3000;
 
@@ -39,6 +40,11 @@ const s3 = new AWS.S3({
 
 // Configure multer
 const multipart = multer({ dest: uploadPath });
+
+// Create uploads folder if not exists
+if (!fs.existsSync(uploadPath)){
+    fs.mkdirSync(uploadPath);
+}
 
 const app = express();
 
