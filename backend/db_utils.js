@@ -16,8 +16,6 @@ const mkQuery = (sql, pool) => {
     }
 }
 
-
-
 module.exports = {
     mkQuery
 }

@@ -9,6 +9,7 @@ const AWS = require('aws-sdk');
 const sha1 = require('sha1');
 AWS.config.credentials = new AWS.SharedIniFileCredentials('default');
 require('dotenv').config();
+const uploadPath = path.join(__dirname, 'uploads');
 
 const { mkQuery } = require('./db_utils');
 
@@ -40,7 +41,7 @@ const s3 = new AWS.S3({
 });
 
 // Configure multer
-const multipart = multer({ dest: path.join(__dirname, 'uploads')});
+const multipart = multer({ dest: uploadPath });
 
 // SQL statements
 const SQL_GET_USER = "select * from user where user_id = ?";
@@ -49,7 +50,6 @@ const getUser = mkQuery(SQL_GET_USER, pool);
 const app = express();
 
 app.use(morgan('combined'));
-
 
 // Configure resources
 
@@ -80,12 +80,6 @@ app.post('/upload', multipart.single('document'),  async (req, res) => {
 
     const { title, comments, user_id, password } = req.body;
     const hashedPassword = sha1(`${password}`);
-
-    // Remove file after process ends
-    process.on('end', () => {
-		fs.rmdir(path.join(__dirname, 'uploads'), { recursive: true })
-            .then(() => console.log('Uploads directory removed.'));
-	});
 
     try{
 
@@ -126,6 +120,10 @@ app.post('/upload', multipart.single('document'),  async (req, res) => {
             });
         Promise.all([p0, p1]).then( ([res1, res2]) => {} ).catch( e => { throw e });
     
+        // Remove file after process ends
+        await fs.rmdir(uploadPath, {recursive: true});
+        await fs.mkdir(uploadPath);
+
         res.status(201).type('application/json').json({success: true, key: req.file.filename});
     } catch (e) {
 		if(e.message = 'User not found' || 'Invalid Password') {
@@ -136,8 +134,6 @@ app.post('/upload', multipart.single('document'),  async (req, res) => {
         res.status(500).type('application/json').json({success: false, error: e.message});
     }
 });
-
-
 
 // Test DB connections and start the server
 const p0 = (async ()=> {
