@@ -10,6 +10,7 @@ const routes = require('./routes/route');
 const path = require('path');
 const uploadPath = path.join(__dirname, 'uploads');
 const fs = require('fs');
+const handleErrors = require('./middleware/handleErrors');
 
 const PORT = parseInt(process.argv[2]) || parseInt(process.env.PORT) || 3000;
 
@@ -56,6 +57,12 @@ app.use(express.static(path.join(__dirname, 'frontend')));
 
 // Use router
 app.use('/', routes(pool, mongoClient, s3, multipart, uploadPath));
+
+app.use(handleErrors);
+
+app.use((req, res)=>{
+    res.status(404).type('text/plain').send('Resource not found');
+});
 
 // Test DB connections and start the server
 const p0 = (async ()=> {

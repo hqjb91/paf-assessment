@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const sha1 = require('sha1');
 const fs = require('fs').promises;
+const { AuthError } = require('../utils/errors');
 
 module.exports = (pool, mongoClient, s3, multipart, uploadPath) => {
 
-const { mkQuery } = require('../db_utils');
+const { mkQuery } = require('../utils/db_utils');
 // SQL statements
 const SQL_GET_USER = "select * from user where user_id = ?";
 const getUserDetails = mkQuery(SQL_GET_USER, pool);
@@ -13,7 +14,7 @@ const getUserDetails = mkQuery(SQL_GET_USER, pool);
 // Configure resources
 
 // POST /login
-router.post('/login', express.json(), async (req, res) => {
+router.post('/login', express.json(), async (req, res, next) => {
     const { user_id, password } = req.body;
     const hashedPassword = sha1(`${password}`);
 
@@ -21,14 +22,14 @@ router.post('/login', express.json(), async (req, res) => {
         await checkAuth(user_id, hashedPassword, getUserDetails);
 
         res.status(200).json({success: true});
-    } catch (e) {
-        console.error(e);
-        res.status(401).json({success: false, error: e.message});
+    } catch (err) {
+        console.error(err);
+        next(err);
     } 
 });
 
 // POST /upload
-router.post('/upload', multipart.single('document'),  async (req, res) => {
+router.post('/upload', multipart.single('document'),  async (req, res, next) => {
 
     const { title, comments, user_id, password } = req.body;
     const hashedPassword = sha1(`${password}`);
@@ -57,7 +58,6 @@ router.post('/upload', multipart.single('document'),  async (req, res) => {
         const currDate = new Date();
         
         // Store posts in mongodb and image in S3
-
         const p0 = s3.putObject(PARAMS).promise();
         const p1 = mongoClient.db('paf2020').collection('posts')
             .insertOne({
@@ -71,13 +71,8 @@ router.post('/upload', multipart.single('document'),  async (req, res) => {
 
         res.status(200).type('application/json').json({success: true, key: req.file.filename, _id: mongoResp.ops[0]._id});
 
-    } catch (e) {
-		if(e.message == 'User not found' || 'Invalid Password') {
-			console.error(e);
-			return res.status(401).type('application/json').json({success: false, error: e.message});
-		}
-        console.error(e);
-        res.status(500).type('application/json').json({success: false, error: e.message});
+    } catch (err) {
+		next(err);
     }
 });
 
@@ -88,9 +83,9 @@ const checkAuth = async (user_id, hashedPassword, getUserDetails) => {
     const hashStoredInDB = await getUserDetails([user_id]);
 
     if( !hashStoredInDB ) {
-        throw new Error('User not found');
+        throw new AuthError('User not found');
     }
     if( hashedPassword != hashStoredInDB.password ) {
-        throw new Error('Invalid Password');
+        throw new AuthError('Invalid Password');
     }
 }
